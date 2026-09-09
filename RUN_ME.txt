@@ -1,0 +1,51 @@
+SIDSRH — PHASE 5 FINAL PACKAGE
+Isabel Waterfield | 402410147
+================================
+
+IMPORTANT (Windows Application Control)
+---------------------------------------
+UseAppHost is false so Windows does not need SIDSRH.Api.exe.
+Always run via the DLL:
+
+  cd C:\SIDSRH_PHASE5_FINAL\SIDSRH.Api
+  Get-ChildItem -Recurse | Unblock-File
+  Remove-Item sidsrh_offline.db -ErrorAction SilentlyContinue
+  dotnet restore
+  dotnet build
+  dotnet run --no-launch-profile --urls http://localhost:5080
+
+Open: http://localhost:5080
+
+If DLL is still blocked (0x800711C7), ask IT to allow the folder, or run on a PC without WDAC.
+
+DATABASE
+--------
+Default: SQLite (sidsrh_offline.db) — offline proof, works immediately.
+SQL Server (HealthcareDB): set appsettings.json Database:Provider = "SqlServer"
+MySQL: Provider = "MySql"
+
+EVERY LOGIN USES MFA (6-minute code shown on screen for academic demo)
+
+  admin@sidsrh.health     / Admin@123
+  manager@sidsrh.health   / Manager@123
+  supply@sidsrh.health    / Supply@123
+  emergency@sidsrh.health / Emerg@123
+  nurse@sidsrh.health     / Staff@123
+  tech@sidsrh.health      / Tech@123
+  patient@demo.health     / Patient@123
+
+Password reset: Login > Forgot password > code shown (6 min) > new password.
+
+BACKUP
+------
+In-app: POST http://localhost:5080/api/Backup/sqlite
+List:   GET  http://localhost:5080/api/Backup/list
+Guide:  GET  http://localhost:5080/api/Backup/instructions
+Also: SSMS backup for HealthcareDB; zip of source code; SQLite file copy.
+
+FEATURES KEPT
+-------------
+Roles + menus, map, drones, deliveries, dual codes, patient requests,
+dispense+verify, reports (CSV + patient receipt), emergency sim ≤15 km,
+charging stations, weather, appointments, MFA all users, activity log,
+lockout, BCrypt, JWT, fees R0/R10, backup API.

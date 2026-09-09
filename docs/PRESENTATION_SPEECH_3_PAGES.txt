@@ -1,0 +1,69 @@
+================================================================================
+SIDSRH — PRESENTATION SPEECH (≈ 3 pages — read aloud)
+Isabel Waterfield | 402410147 | Secure Integrated Drone System for Remote Healthcare
+================================================================================
+
+PAGE 1 — OPENING AND PROBLEM
+----------------------------
+Good morning lecturers, panelists and attendees. My name is Isabel Waterfield,
+student number 402410147. Today I present the Secure Integrated Drone System for
+Remote Healthcare, developed for the Year 3 IT Project in accordance with the
+Faculty guidelines: a full software development life cycle and a working software
+product — not a physical installation and not a theory-only study.
+
+Remote healthcare in provinces such as the Eastern Cape still struggles with
+distance, fragile medicine supply chains, weak equipment accountability, and
+slow coordination between mobile clinics and supply points. Existing drone
+pilots show that aerial delivery can help, but many tools remain isolated. SIDSRH
+brings simulated drone logistics, staff and equipment visibility, medical supply
+control, emergency medicine planning within fifteen kilometres, and secure role-
+based access into one platform.
+
+The system is deliberately a software simulation. It uses the Haversine formula
+for distance, battery and speed models for estimated arrival, and never issues a
+real flight command. That keeps the project legal, assessable, and focused on
+software engineering quality.
+
+
+PAGE 2 — WHAT WAS BUILT AND HOW IT WORKS
+----------------------------------------
+Architecture is a classic three-layer design: a browser interface, an ASP.NET
+Core eight API in C#, and a relational database. For reliable demonstration the
+default database is SQLite offline. The same codebase switches to Microsoft SQL
+Server HealthcareDB or MySQL when configured — so both offline proof and online
+database options are available.
+
+Security was treated as a first-class feature. Passwords are stored with BCrypt.
+Every account — administrator, manager, nurse, technician and patient — receives
+a multi-factor login code that expires in six minutes. Failed logins lock the
+account after five attempts. JWT tokens carry the role. Activity is written to
+an audit log. Patients register themselves; staff accounts are created by an
+administrator. Password reset uses the same six-minute one-time code so testers
+can recover accounts without breaking the demo.
+
+Core operations follow the design: create a delivery, assign an available drone,
+dispatch with a staff dispatch code, then complete with a separate arrival code
+for the recipient. Urgent support is capped at fifteen kilometres; routine
+medicine delivery at forty. In rain, the system enforces the fifteen kilometre
+limit. Preferred clinic time slots are free; outside those slots a ten rand
+patient charge can apply. Reports include CSV extracts for managers and
+technicians and a short confidential PDF-style receipt for patients — date, time,
+technician, brief reason only, and charge.
+
+
+PAGE 3 — TESTING, BACKUP, VALUE, CLOSE
+--------------------------------------
+Phase five testing covered unit checks on distance and fees, integration of the
+full delivery path, and system tests for each role. Screenshots in the document
+show welcome, MFA login, dashboard, map, codes, simulation, receipt and logs.
+Backup is provided in three practical ways: an in-application SQLite file backup
+into a Backups folder, standard SQL Server or MySQL dump procedures documented
+in the API, and a source-code zip excluding build outputs.
+
+Why this system? It answers the research need for integrated operational
+visibility without pretending to fly real aircraft. It demonstrates POPIA-minded
+access control, end-to-end software engineering, and a product a clinic manager
+can understand in a short demonstration.
+
+I will now open the live system, walk through login with the one-time code,
+show a delivery from request to receipt, and take your questions. Thank you.

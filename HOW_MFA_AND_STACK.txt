@@ -1,0 +1,50 @@
+HOW MFA WORKS (SIDSRH)
+======================
+1. User enters email + password.
+2. Server verifies BCrypt password hash.
+3. If MfaEnabled (all accounts), server generates a 6-digit code, stores BCrypt hash
+   of the code with ExpiresAt = now + 6 minutes, returns mfaRequired + demoOtp
+   (demo channel on screen for academic testing).
+4. User enters the code and clicks Sign in again (password still sent).
+5. Server finds the latest unused, non-expired OTP for that email and verifies hash.
+6. On success, JWT is issued and OTP is marked used.
+
+Why you saw "Invalid or expired" before:
+- Old UI used a browser alert and did not keep the code field reliably.
+- New UI shows an MFA panel, pre-fills the demo code, and trims spaces.
+
+STACK / FRAMEWORKS
+==================
+- C# / .NET 8
+- ASP.NET Core Web API (controllers, JWT middleware, static files)
+- Entity Framework Core 8 (ORM)
+- SQLite | SQL Server | MySQL providers
+- BCrypt.Net-Next (password + OTP hashing)
+- JWT Bearer tokens
+- Leaflet + OpenStreetMap (live map + animated flight path)
+
+CONNECTION STRINGS (appsettings.json)
+=====================================
+Sqlite:   Data Source=sidsrh_offline.db
+SqlServer: Server=(localdb)\mssqllocaldb;Database=HealthcareDB;Trusted_Connection=True;TrustServerCertificate=True
+MySql:    Server=localhost;Port=3306;Database=HealthcareDB;User=root;Password=
+
+BACKUP POLICY (demo narrative)
+==============================
+- Offline/local: SQLite file backups via POST /api/Backup/sqlite — keep ~3 weeks on device.
+- Online: SQL Server/MySQL scheduled backups retained up to 2 years operationally;
+  longer retention from archive / data-centre cold storage.
+
+ANDROID
+=======
+SIDSRH_Android folder included for optional mini demo (not the main assessment focus).
+Open in Android Studio when needed.
+
+RUN
+===
+cd SIDSRH.Api
+Get-ChildItem -Recurse | Unblock-File
+dotnet restore
+dotnet build
+dotnet run --no-launch-profile --urls http://localhost:5080
+# Delete sidsrh_offline.db once if seed/MFA looks stale

@@ -1,0 +1,123 @@
+SIDSRH — TECHNICAL QUESTIONS AND ANSWERS (study pack)
+=====================================================
+
+1. What is SIDSRH?
+   A simulated, secure web system for rural medical supply drone logistics, staff,
+   equipment, inventory, emergency planning ≤15 km, and role-based reporting.
+
+2. Why simulation only?
+   Faculty rules require software development; SACAA/physical flight is out of scope.
+
+3. Which SDLC?
+   Waterfall-style phases (proposal → planning → analysis → design → implementation).
+
+4. Stack?
+   C# / ASP.NET Core 8, EF Core, JWT, BCrypt, SQLite or SQL Server or MySQL, Leaflet SPA.
+
+5. Why ASP.NET Core?
+   Strong typing, mature security middleware, EF integration, good for enterprise APIs.
+
+6. What are controllers for?
+   HTTP endpoints: validate input, call DB/rules, return JSON or files.
+
+7. What is EF Core?
+   ORM mapping C# entities to tables; parameterised queries reduce SQL injection risk.
+
+8. Why BCrypt?
+   Adaptive password hashing; plain text passwords are never stored.
+
+9. How does MFA work?
+   After password OK, 6-digit OTP hashed and stored with expiry; user must submit OTP.
+
+10. Why MFA for every role?
+    Uniform security demonstration; patients also protect health-related requests.
+
+11. How is JWT used?
+    Signed token with user id, email, role; sent as Bearer token from the browser.
+
+12. How are roles separated?
+    Seeded Role field; UI menus per role; admin creates staff; patients self-register.
+
+13. Haversine?
+    Formula for distance between GPS coordinates on a sphere; drives 15/40 km rules.
+
+14. Delivery status flow?
+    Pending → Assigned → In Transit → Completed (with codes).
+
+15. Two codes?
+    Dispatch code (staff, before leave); Arrival code (recipient unlocks parcel).
+
+16. Rain rule?
+    When weather is Rain, deliveries beyond 15 km are blocked.
+
+17. Patient fee?
+    R0 in slots 06:30/09:00/16:00; R10 outside; delay fine documented as R3 policy.
+
+18. Backup options?
+    SQLite file copy API; SQL Server BACKUP DATABASE; mysqldump; source zip.
+
+19. What if campus blocks .exe?
+    UseAppHost=false; run: dotnet run --no-launch-profile --urls http://localhost:5080
+
+20. HealthcareDB?
+    SQL Server database name; set Provider SqlServer and connection string in appsettings.
+
+21. Offline proof?
+    Default SQLite file database works without a server instance.
+
+22. POPIA?
+    RBAC, audit log, minimal receipt text, no clinical diagnosis engine.
+
+23. Activity log?
+    Records login, creates, maintenance, simulations for accountability.
+
+24. How to add an admin function?
+    Add API action + menu entry for Administrator role only.
+
+25. Where change colours?
+    wwwroot/index.html CSS variables --navy and --teal.
+
+26. SignalR?
+    Designed in Phase 4; SPA can poll as fallback when SignalR not required for pass.
+
+27. Cold-chain?
+    MedicalSupply.ColdChain flag for temperature-sensitive items.
+
+28. Lockout?
+    FailedLoginCount; Status Locked after 5 failures.
+
+29. Password reset?
+    Forgot-password issues 6-min OTP; reset-password verifies and sets new hash.
+
+30. Reports separation?
+    Manager weekly vs technician fleet vs patient brief receipt.
+
+31. Cost model?
+    Academic effort-based; production would add hosting and SMS gateway costs.
+
+32. Validation examples?
+    Distance limits, stock qty, arrival code match, OTP expiry.
+
+33. Error handling?
+    Try/catch on dashboard; BadRequest messages to UI; lockout path.
+
+34. Why Leaflet?
+    Free map tiles for Eastern Cape clinic points without paid Google key for demo.
+
+35. Charging stations?
+    Entities for 15 km coverage pads used in weather-hold narrative.
+
+36. Appointments?
+    Remind that some care still needs in-person clinic visits between deliveries.
+
+37. Code efficiency?
+    Indexed email; AsNoTracking reads; limited log page sizes.
+
+38. Future work?
+    Real SMS OTP, SignalR ticks, hardened mobile offline queue, managed cloud DB.
+
+39. How do you know hashing works?
+    Login fails with wrong password; DB stores only hashes; BCrypt.Verify in code.
+
+40. Sales pitch in one line?
+    One secure screen for rural clinic supply drones — simulated, auditable, role-aware.

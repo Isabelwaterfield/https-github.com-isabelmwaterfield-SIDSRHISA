@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SIDSRH — Rural Healthcare Drone Logistics</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--navy:#0a2e5c;--teal:#0d9488;--bg:#f0f7fa;--card:#ffffff;--border:#d6e4ec;--text:#1e293b;--muted:#64748b;--shadow:0 4px 20px rgba(10,46,92,.08)}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+.screen{display:none;min-height:100vh}
+.screen.on{display:block}
+.welcome{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;
+  background:linear-gradient(180deg,#e8f4f8 0%,#f7fbfd 55%,#fff 100%)}
+.welcome .hero{width:min(320px,90vw);border-radius:16px;box-shadow:0 12px 40px rgba(8,44,96,.12);overflow:hidden;background:#fff}
+.welcome .hero img{width:100%;display:block}
+.welcome h1{margin:20px 0 6px;color:var(--navy);font-size:28px;letter-spacing:.02em}
+.welcome .tag{color:var(--teal);margin:0 0 18px;font-size:15px}
+.actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.btn{background:var(--navy);color:#fff;border:0;padding:12px 24px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;text-decoration:none;display:inline-block;transition:all .15s ease;letter-spacing:.01em}
+.btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+.btn:hover{background:var(--teal);border-color:var(--teal);color:#fff}
+.mode{margin-top:18px;font-size:12px;color:#667}
+.auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:#dfeef5 url('/assets/auth-bg.jpg') center center / cover no-repeat}
+.auth .card{background:rgba(255,255,255,.96);padding:28px 26px;border-radius:14px;width:min(400px,94vw);
+  box-shadow:0 10px 36px rgba(0,0,0,.14)}
+.auth h2{margin:0 0 14px;color:var(--navy)}
+label{display:block;font-size:13px;color:#345;margin-top:4px}
+input,select,textarea{width:100%;padding:10px 12px;margin:6px 0 12px;border:1px solid #c5d5e0;border-radius:8px;font-size:14px}
+.err{color:#b00020;font-size:13px;min-height:18px}
+.hint{color:var(--teal);font-size:13px;margin:0 0 8px}
+.app{display:flex;min-height:100vh}
+nav{width:250px;background:linear-gradient(180deg,var(--navy) 0%,#0c3d7a 100%);color:#fff;padding:20px 0;flex-shrink:0;box-shadow:4px 0 24px rgba(10,46,92,.15)}
+nav .brand{padding:0 18px 16px;font-weight:700;font-size:18px;letter-spacing:.04em}
+nav a{display:block;color:#dce8f5;padding:10px 18px;text-decoration:none;font-size:13px;cursor:pointer;border-left:3px solid transparent}
+nav a:hover,nav a.active{background:#0c3d7a;color:#fff;border-left-color:var(--teal)}
+main{flex:1;padding:18px;overflow:auto}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.top #who{font-size:13px;color:#456}
+.panel{background:var(--card);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.kpi{background:#f4fafc;border:1px solid #d7e8ef;border-radius:10px;padding:14px;text-align:center}
+.kpi b{display:block;font-size:22px;color:var(--navy)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border-bottom:1px solid #e4eef3;padding:8px;text-align:left}
+#map{height:400px;border-radius:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mfa-box{display:none;background:#f0fafb;border:1px solid #b8e0e6;border-radius:8px;padding:12px;margin-bottom:10px}
+.mfa-box.on{display:block}
+@media(max-width:900px){.app{flex-direction:column}nav{width:100%}}
+</style>
+</head>
+<body>
+<div id="welcome" class="screen on welcome">
+  <div class="hero"><img src="/assets/welcome-banner.png" alt="SIDSRH" onerror="this.src='/assets/sidsrh-logo.png'"/></div>
+  <h1>SIDSRH</h1>
+  <p class="tag">Smart Integrated Drone Supply for Rural Healthcare</p>
+  <div class="actions">
+    <button class="btn" onclick="show('login')">Login</button>
+    <button class="btn ghost" onclick="show('register')">Register (patients)</button>
+  </div>
+  <p class="mode" id="modeInfo">Loading…</p>
+</div>
+
+<div id="login" class="screen auth">
+  <div class="card">
+    <h2>Login</h2>
+    <label>Email</label>
+    <input id="lemail" type="email" autocomplete="username" value="admin@sidsrh.health"/>
+    <label>Password</label>
+    <input id="lpass" type="password" autocomplete="current-password" value="Admin@123"/>
+    <div id="mfaBox" class="mfa-box">
+      <p class="hint" id="mfaHint">Enter the 6-digit code (valid 6 minutes).</p>
+      <label>MFA code</label>
+      <input id="lotp" inputmode="numeric" maxlength="6" placeholder="6-digit code" autocomplete="one-time-code"/>
+    </div>
+    <div class="err" id="lerr"></div>
+    <button class="btn" style="width:100%" onclick="doLogin()">Sign in</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="show('forgot')">Forgot password</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="show('welcome')">Back</button>
+  </div>
+</div>
+
+<div id="forgot" class="screen auth">
+  <div class="card">
+    <h2>Password reset</h2>
+    <label>Email</label><input id="femail" type="email"/>
+    <button class="btn" style="width:100%" onclick="sendReset()">Send code</button>
+    <p class="hint" id="fhint"></p>
+    <label>Code</label><input id="fotp" inputmode="numeric" maxlength="6"/>
+    <label>New password</label><input id="fpass" type="password"/>
+    <div class="err" id="ferr"></div>
+    <button class="btn" style="width:100%" onclick="doReset()">Reset password</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="show('login')">Back</button>
+  </div>
+</div>
+
+<div id="register" class="screen auth">
+  <div class="card">
+    <h2>Patient registration</h2>
+    <p class="hint">Staff accounts are created by an administrator.</p>
+    <label>First name</label><input id="rf"/>
+    <label>Last name</label><input id="rl"/>
+    <label>Email</label><input id="re" type="email"/>
+    <label>Password</label><input id="rp" type="password"/>
+    <div class="err" id="rerr"></div>
+    <button class="btn" style="width:100%" onclick="doRegister()">Create account</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="show('welcome')">Back</button>
+  </div>
+</div>
+
+<div id="app" class="screen">
+  <div class="app">
+    <nav>
+      <div class="brand">SIDSRH</div>
+      <div id="menu"></div>
+      <a onclick="logout()">Logout</a>
+    </nav>
+    <main>
+      <div class="top"><div id="pageTitle">Dashboard</div><div id="who"></div></div>
+      <div id="content"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+const MENUS={
+  "Administrator":[["dashboard","Dashboard"],["map","Live Map"],["drones","Drones"],["deliveries","Deliveries"],["requests","Patient Requests"],["dispense","Clinic Dispense"],["supplies","Medical Supplies"],["patients","Patients"],["staff","Staff"],["users","Users"],["clinics","Clinics"],["equipment","Equipment"],["sim","Emergency Simulation"],["stations","Charging"],["weather","Weather"],["appointments","Appointments"],["reports","Reports"],["logs","Activity Log"]],
+  "Manager":[["dashboard","Dashboard"],["map","Live Map"],["deliveries","Deliveries"],["requests","Patient Requests"],["dispense","Clinic Dispense"],["staff","Staff"],["patients","Patients"],["reports","Reports"],["logs","Activity Log"]],
+  "Supply Coordinator":[["dashboard","Dashboard"],["deliveries","Deliveries"],["supplies","Medical Supplies"],["dispense","Clinic Dispense"],["reports","Reports"]],
+  "Emergency Coordinator":[["dashboard","Dashboard"],["map","Live Map"],["requests","Patient Requests"],["sim","Emergency Simulation"],["reports","Reports"]],
+  "Healthcare Staff":[["dashboard","Dashboard"],["deliveries","Deliveries"],["requests","Patient Requests"],["dispense","Clinic Dispense"],["patients","Patients"],["appointments","Appointments"]],
+  "Technician":[["dashboard","Dashboard"],["drones","Drones"],["stations","Charging"],["equipment","Equipment"],["reports","Reports"]],
+  "Patient":[["dashboard","Dashboard"],["requests","My Requests"],["deliveries","Track delivery"],["appointments","Checkups"]]
+};
+let token=localStorage.getItem("sidsrh_token")||"";
+let user=JSON.parse(localStorage.getItem("sidsrh_user")||"null");
+let mfaPending=false;
+let map,flightTimer,flightMarker;
+
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
+  document.getElementById(id).classList.add("on");
+  if(id==="login"&&!mfaPending){mfaBox.classList.remove("on");lotp.value="";lerr.textContent="";}
+}
+
+async function api(path,opts={}){
+  const h={"Content-Type":"application/json"};
+  if(token)h["Authorization"]="Bearer "+token;
+  const r=await fetch(path,{...opts,headers:{...h,...(opts.headers||{})}});
+  const text=await r.text();
+  let data;try{data=JSON.parse(text);}catch{data=text;}
+  if(!r.ok)throw new Error((data&&data.message)||text||r.statusText);
+  return data;
+}
+
+async function doLogin(){
+  lerr.textContent="";
+  const body={email:lemail.value.trim(),password:lpass.value};
+  if(mfaPending){
+    const code=(lotp.value||"").trim();
+    if(!code||code.length<6){lerr.textContent="Enter the 6-digit MFA code.";return;}
+    body.otp=code;
+  }
+  try{
+    const data=await api("/api/Auth/login",{method:"POST",body:JSON.stringify(body)});
+    if(data.mfaRequired){
+      mfaPending=true;
+      mfaBox.classList.add("on");
+      mfaHint.textContent="MFA code (valid 6 minutes): "+(data.demoOtp||"check email channel");
+      lotp.value=data.demoOtp||"";
+      lotp.focus();
+      return;
+    }
+    mfaPending=false;
+    mfaBox.classList.remove("on");
+    token=data.token;user=data.user;
+    localStorage.setItem("sidsrh_token",token);
+    localStorage.setItem("sidsrh_user",JSON.stringify(user));
+    openApp();
+  }catch(e){
+    lerr.textContent=e.message||"Login failed";
+    if((e.message||"").toLowerCase().includes("expired")||(e.message||"").toLowerCase().includes("invalid")){
+      mfaHint.textContent="Code failed. Sign in again to receive a new code.";
+      mfaPending=false;
+      mfaBox.classList.remove("on");
+      lotp.value="";
+    }
+  }
+}
+
+async function sendReset(){
+  ferr.textContent="";fhint.textContent="";
+  try{
+    const r=await api("/api/Auth/forgot-password",{method:"POST",body:JSON.stringify({email:femail.value.trim()})});
+    fhint.textContent=(r.message||"Code sent")+(r.demoOtp?(" — Code: "+r.demoOtp):"");
+  }catch(e){ferr.textContent=e.message;}
+}
+async function doReset(){
+  ferr.textContent="";
+  try{
+    await api("/api/Auth/reset-password",{method:"POST",body:JSON.stringify({email:femail.value.trim(),otp:(fotp.value||"").trim(),password:fpass.value})});
+    fhint.textContent="Password updated. You can sign in.";
+    show("login");
+  }catch(e){ferr.textContent=e.message;}
+}
+async function doRegister(){
+  rerr.textContent="";
+  try{
+    await api("/api/Auth/register",{method:"POST",body:JSON.stringify({firstName:rf.value,lastName:rl.value,email:re.value,password:rp.value})});
+    show("login");lerr.textContent="";mfaHint.textContent="Account created. Sign in with MFA.";
+  }catch(e){rerr.textContent=e.message;}
+}
+function logout(){token="";user=null;mfaPending=false;localStorage.clear();if(flightTimer)clearInterval(flightTimer);show("welcome");}
+
+function openApp(){
+  show("app");
+  who.textContent=(user.firstName||"")+" - "+(user.role||"");
+  const items=MENUS[user.role]||MENUS["Healthcare Staff"];
+  menu.innerHTML=items.map(([id,label])=>`<a data-id="${id}" onclick="nav('${id}')">${label}</a>`).join("");
+  nav("dashboard");
+}
+
+function animateRoute(mapObj,from,to){
+  if(flightTimer)clearInterval(flightTimer);
+  if(flightMarker){mapObj.removeLayer(flightMarker);flightMarker=null;}
+  const steps=80;let i=0;
+  flightMarker=L.circleMarker(from,{radius:9,color:"#007d89",fillColor:"#00a8b5",fillOpacity:1}).addTo(mapObj).bindPopup("Drone in transit");
+  const line=L.polyline([from,to],{color:"#082c60",weight:3,dashArray:"8 8"}).addTo(mapObj);
+  mapObj.fitBounds(line.getBounds(),{padding:[40,40]});
+  flightTimer=setInterval(()=>{
+    i++;
+    const t=i/steps;
+    const lat=from[0]+(to[0]-from[0])*t;
+    const lng=from[1]+(to[1]-from[1])*t;
+    flightMarker.setLatLng([lat,lng]);
+    if(i>=steps){clearInterval(flightTimer);flightMarker.bindPopup("Arrived").openPopup();}
+  },120);
+}
+
+async function nav(id){
+  document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===id));
+  pageTitle.textContent=id.replace(/^\w/,c=>c.toUpperCase());
+  const c=content;c.innerHTML="Loading…";
+  try{
+    if(id==="dashboard"){
+      const d=await api("/api/Dashboard");
+      c.innerHTML=`<div class="kpis">
+        <div class="kpi"><b>${d.dronesAvailable}</b>Drones available</div>
+        <div class="kpi"><b>${d.dronesTotal}</b>Drones total</div>
+        <div class="kpi"><b>${d.deliveriesActive}</b>Active deliveries</div>
+        <div class="kpi"><b>${d.deliveriesTotal}</b>Deliveries</div>
+        <div class="kpi"><b>${d.requestsOpen||0}</b>Open requests</div>
+        <div class="kpi"><b>${d.supplies}</b>Supply types</div>
+        <div class="kpi"><b>${d.weather||"—"}</b>Weather</div>
+      </div>`;
+    }else if(id==="map"){
+      c.innerHTML=`<div class="panel"><div class="row" style="margin-bottom:10px">
+        <button class="btn" onclick="playDemoFlight()">Play demo flight path</button>
+        <span class="hint">Animated path between hub and clinic (simulated).</span></div>
+        <div id="map"></div></div>`;
+      const locs=await api("/api/Locations");
+      const drones=await api("/api/Drones");
+      map=L.map("map").setView([-31.5,28.85],9);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
+      window._locs=locs;
+      locs.forEach(l=>L.marker([l.latitude,l.longitude]).addTo(map).bindPopup(l.locationName));
+      drones.forEach(d=>{if(d.latitude)L.circleMarker([d.latitude,d.longitude],{radius:8,color:"#007d89"}).addTo(map).bindPopup(d.droneName+" · "+d.status+" · "+d.batteryLevel+"%");});
+      setTimeout(()=>map.invalidateSize(),200);
+    }else if(id==="drones"){
+      const rows=await api("/api/Drones");
+      c.innerHTML=`<div class="panel"><table><thead><tr><th>Name</th><th>Status</th><th>Battery</th><th>Speed</th><th></th></tr></thead>
+        <tbody>${rows.map(d=>`<tr><td>${d.droneName}</td><td>${d.status}</td><td>${d.batteryLevel}%</td><td>${d.speedKmh} km/h</td>
+        <td><button class="btn" onclick="droneMaint('${d.droneId}',${d.status!=='Maintenance'})">${d.status==='Maintenance'?'Return to service':'Maintenance'}</button></td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="deliveries"){
+      const rows=await api("/api/Deliveries");
+      const supplies=await api("/api/Supplies");
+      const locs=await api("/api/Locations");
+      c.innerHTML=`<div class="panel"><h3 style="margin-top:0">Create delivery</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label>Supply</label><select id="csup">${supplies.map(s=>`<option value="${s.supplyId}">${s.supplyName} (${s.quantity})</option>`).join("")}</select></div>
+          <div><label>Qty</label><input id="cqty" type="number" value="1"/></div>
+          <div><label>Origin</label><select id="cori">${locs.map(l=>`<option value="${l.locationId}">${l.locationName}</option>`).join("")}</select></div>
+          <div><label>Destination</label><select id="cdes">${locs.map(l=>`<option value="${l.locationId}">${l.locationName}</option>`).join("")}</select></div>
+          <div><label>Slot</label><select id="cslot"><option>06:30</option><option selected>09:00</option><option>16:00</option><option>Other</option></select></div>
+        </div>
+        <button class="btn" style="margin-top:10px" onclick="createDel()">Save</button></div>
+        <div class="panel"><table><thead><tr><th>ID</th><th>Status</th><th>Km</th><th>Fee</th><th>Codes</th><th>Actions</th></tr></thead>
+        <tbody>${rows.map(d=>`<tr><td>${d.deliveryId}</td><td>${d.deliveryStatus}</td><td>${d.distanceKm}</td>
+        <td>R${Number(d.patientFee+d.delayFine).toFixed(2)}</td>
+        <td style="font-size:11px">${d.dispatchCode?("D:"+d.dispatchCode):""} ${d.arrivalCode?("A:"+d.arrivalCode):""}</td>
+        <td class="row">
+          ${d.deliveryStatus==="Pending"?`<button class="btn" onclick="assignDel('${d.deliveryId}')">Assign</button>`:""}
+          ${d.deliveryStatus==="Assigned"?`<button class="btn" onclick="dispatchDel('${d.deliveryId}')">Dispatch</button>`:""}
+          ${d.deliveryStatus==="In Transit"?`<button class="btn" onclick="completeDel('${d.deliveryId}','${d.arrivalCode||""}')">Complete</button>`:""}
+          <button class="btn ghost" onclick="window.open('/api/Reports/patient-receipt/${d.deliveryId}')">Receipt</button>
+        </td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="requests"){
+      const rows=await api("/api/PatientRequests");
+      const drones=await api("/api/Drones");const supplies=await api("/api/Supplies");
+      window._drones=drones;window._supplies=supplies;
+      c.innerHTML=`<div class="panel"><h3 style="margin-top:0">New request</h3>
+        <label>Patient</label><input id="rname"/><label>Phone</label><input id="rphone"/>
+        <label>Location ID</label><input id="rloc" value="LOC002"/>
+        <label>Category</label><select id="rcat"><option>Allergy relief</option><option>Hydration</option><option>Pain and fever relief</option><option>Wound care</option></select>
+        <label>Service</label><select id="rsvc"><option value="Urgent">Urgent (≤15 km)</option><option value="Routine">Routine (≤40 km)</option></select>
+        <label>Need</label><input id="rneed"/>
+        <button class="btn" onclick="newReq()">Submit</button></div>
+        <div class="panel"><table><thead><tr><th>ID</th><th>Patient</th><th>Need</th><th>Status</th><th>Km</th><th></th></tr></thead>
+        <tbody>${rows.map(r=>`<tr><td>${r.requestId}</td><td>${r.patientName}</td><td>${r.medicalNeed}</td><td>${r.status}</td><td>${r.distanceKm??""}</td>
+        <td>${r.status==="Submitted"?`<button class="btn" onclick="acceptReq('${r.requestId}')">Accept + drone</button>`:""}</td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="dispense"){
+      const rows=await api("/api/Dispense");const supplies=await api("/api/Supplies");
+      c.innerHTML=`<div class="panel"><label>Patient</label><input id="dpn"/><label>Supply</label><select id="dps">${supplies.map(s=>`<option value="${s.supplyId}">${s.supplyName}</option>`).join("")}</select>
+        <label>Qty</label><input id="dpq" type="number" value="1"/><button class="btn" onclick="doDisp()">Dispense</button></div>
+        <div class="panel"><table><thead><tr><th>ID</th><th>Patient</th><th>Qty</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows.map(r=>`<tr><td>${r.dispenseId}</td><td>${r.patientName}</td><td>${r.quantity}</td><td>${r.status}</td>
+        <td>${r.status==="PendingVerify"?`<button class="btn" onclick="verDisp('${r.dispenseId}')">Verify</button>`:""}</td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="supplies"){
+      const rows=await api("/api/Supplies");
+      c.innerHTML=`<div class="panel"><table><thead><tr><th>Name</th><th>Type</th><th>Qty</th><th>Expiry</th></tr></thead>
+        <tbody>${rows.map(s=>`<tr><td>${s.supplyName}</td><td>${s.supplyType}</td><td>${s.quantity}</td><td>${(s.expiryDate||"").toString().slice(0,10)}</td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="patients"){
+      const rows=await api("/api/Patients");
+      c.innerHTML=`<div class="panel"><label>Full name</label><input id="pfn"/><label>Phone</label><input id="pfp"/><button class="btn" onclick="addPat()">Create</button></div>
+        <div class="panel"><table><thead><tr><th>ID</th><th>Name</th><th>Phone</th></tr></thead>
+        <tbody>${rows.map(p=>`<tr><td>${p.patientId}</td><td>${p.fullName}</td><td>${p.contactNumber}</td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="staff"){
+      const rows=await api("/api/Staff");
+      c.innerHTML=`<div class="panel"><table><thead><tr><th>Name</th><th>Job</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows.map(s=>`<tr><td>${s.firstName} ${s.lastName}</td><td>${s.jobTitle}</td><td>${s.status}</td>
+        <td><button class="btn ghost" onclick="delStaff('${s.staffId}')">Delete</button></td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="users"){
+      const rows=await api("/api/Users");
+      c.innerHTML=`<div class="panel"><label>First</label><input id="uf"/><label>Last</label><input id="ul"/><label>Email</label><input id="ue"/>
+        <label>Role</label><select id="ur"><option>Healthcare Staff</option><option>Manager</option><option>Supply Coordinator</option><option>Emergency Coordinator</option><option>Technician</option><option>Administrator</option></select>
+        <label>Password</label><input id="up" type="password" value="ChangeMe@123"/><button class="btn" onclick="addUser()">Create</button></div>
+        <div class="panel"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>MFA</th></tr></thead>
+        <tbody>${rows.map(u=>`<tr><td>${u.firstName} ${u.lastName}</td><td>${u.email}</td><td>${u.role}</td><td>${u.mfaEnabled?"Yes":"No"}</td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="clinics"){
+      const rows=await api("/api/Clinics");
+      c.innerHTML=`<div class="panel"><table><thead><tr><th>Clinic</th><th>Location</th><th>Status</th></tr></thead>
+        <tbody>${rows.map(x=>`<tr><td>${x.clinicName}</td><td>${x.locationId}</td><td>${x.status}</td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="equipment"){
+      const rows=await api("/api/Equipment");
+      c.innerHTML=`<div class="panel"><table><thead><tr><th>Name</th><th>Type</th><th>Status</th></tr></thead>
+        <tbody>${rows.map(x=>`<tr><td>${x.equipmentName}</td><td>${x.equipmentType}</td><td>${x.status}</td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="sim"){
+      const scenarios=await api("/api/Simulations/scenarios");const sims=await api("/api/Simulations");
+      c.innerHTML=`<div class="panel"><h3 style="margin-top:0">Emergency medicine simulation (≤15 km)</h3>
+        <select id="scen">${scenarios.map(s=>`<option value="${s.scenarioId}">${s.scenarioName}</option>`).join("")}</select>
+        <button class="btn" onclick="runSim()">Run</button><pre id="simOut" style="white-space:pre-wrap;font-size:12px"></pre></div>
+        <div class="panel"><table><thead><tr><th>ID</th><th>Status</th><th>Km</th><th>ETA</th><th>Result</th></tr></thead>
+        <tbody>${sims.map(s=>`<tr><td>${s.simulationId}</td><td>${s.status}</td><td>${s.distanceKm??""}</td><td>${s.estimatedResponseTime??""}</td><td style="font-size:11px">${s.result||""}</td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="stations"){
+      const rows=await api("/api/Stations");
+      c.innerHTML=`<div class="panel"><table><thead><tr><th>Name</th><th>Type</th><th>Radius</th><th>Status</th></tr></thead>
+        <tbody>${rows.map(s=>`<tr><td>${s.stationName}</td><td>${s.stationType}</td><td>${s.coverageRadiusKm} km</td><td>${s.status}</td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="weather"){
+      const w=await api("/api/Weather");
+      c.innerHTML=`<div class="panel"><p>Current: <b>${w.condition}</b></p>
+        <select id="wcon"><option>Clear</option><option>Rain</option><option>Heavy Rain</option><option>Wind</option></select>
+        <button class="btn" onclick="setWeather()">Update</button>
+        <p class="hint">Rain restricts deliveries beyond 15 km.</p></div>`;
+    }else if(id==="appointments"){
+      const rows=await api("/api/Appointments");
+      c.innerHTML=`<div class="panel"><table><thead><tr><th>When</th><th>Patient</th><th>Clinic</th><th>Brief</th><th>Status</th></tr></thead>
+        <tbody>${rows.map(a=>`<tr><td>${(a.appointmentAt||"").toString().replace("T"," ").slice(0,16)}</td><td>${a.patientName}</td><td>${a.clinicId}</td><td>${a.reasonBrief}</td><td>${a.status}</td></tr>`).join("")}</tbody></table></div>`;
+    }else if(id==="reports"){
+      c.innerHTML=`<div class="panel row">
+        <a class="btn" href="/api/Reports/deliveries.csv">Deliveries CSV</a>
+        <a class="btn" href="/api/Reports/manager-weekly.csv">Manager weekly CSV</a>
+        <a class="btn" href="/api/Reports/technician.csv">Technician CSV</a>
+        <button class="btn ghost" onclick="doBackup()">Backup database</button>
+      </div>
+      <div class="panel"><label>Patient receipt delivery ID</label>
+        <div class="row"><input id="rcptId" placeholder="DEL-..."/><button class="btn" onclick="window.open('/api/Reports/patient-receipt/'+rcptId.value)">Open receipt</button></div>
+        <p class="hint">Offline backups retained about 3 weeks on this device. Online operational backups can be kept up to 2 years; older sets move to archive storage.</p>
+      </div>`;
+    }else if(id==="logs"){
+      const rows=await api("/api/ActivityLogs");
+      c.innerHTML=`<div class="panel"><table><thead><tr><th>Time</th><th>Type</th><th>User</th><th>Description</th></tr></thead>
+        <tbody>${rows.map(l=>`<tr><td>${(l.timestamp||"").toString().replace("T"," ").slice(0,19)}</td><td>${l.activityType}</td><td>${l.userId||""}</td><td>${l.description}</td></tr>`).join("")}</tbody></table></div>`;
+    }
+  }catch(e){c.innerHTML=`<div class="panel err">${e.message}</div>`;}
+}
+
+function playDemoFlight(){
+  if(!map||!window._locs)return;
+  const hub=window._locs.find(l=>l.locationId==="LOC005")||window._locs[0];
+  const clinic=window._locs.find(l=>l.locationId==="LOC002")||window._locs[1];
+  if(!hub||!clinic)return;
+  animateRoute(map,[hub.latitude,hub.longitude],[clinic.latitude,clinic.longitude]);
+}
+async function createDel(){try{await api("/api/Deliveries",{method:"POST",body:JSON.stringify({supplyId:csup.value,quantity:cqty.value,originLocationId:cori.value,destinationLocationId:cdes.value,preferredSlot:cslot.value,clinicId:"CLN001"})});nav("deliveries");}catch(e){lerr.textContent=e.message;alert(e.message);}}
+async function assignDel(id){try{const drones=await api("/api/Drones");const d=drones.find(x=>x.status==="Available");if(!d){alert("No available drone");return;}
+  await api("/api/Deliveries/"+id+"/assign",{method:"POST",body:JSON.stringify({droneId:d.droneId,technicianName:"On-duty technician"})});nav("deliveries");}catch(e){alert(e.message);}}
+async function dispatchDel(id){try{await api("/api/Deliveries/"+id+"/dispatch",{method:"POST",body:"{}"});nav("deliveries");}catch(e){alert(e.message);}}
+async function completeDel(id,code){const c=prompt("Arrival code",code||"");if(c===null)return;
+  try{await api("/api/Deliveries/"+id+"/complete",{method:"POST",body:JSON.stringify({arrivalCode:(c||"").trim()})});nav("deliveries");}catch(e){alert(e.message);}}
+async function newReq(){try{await api("/api/PatientRequests",{method:"POST",body:JSON.stringify({patientName:rname.value,contactNumber:rphone.value,locationId:rloc.value,category:rcat.value,serviceClass:rsvc.value,medicalNeed:rneed.value})});nav("requests");}catch(e){alert(e.message);}}
+async function acceptReq(id){try{const d=(window._drones||[]).find(x=>x.status==="Available");const s=(window._supplies||[])[0];
+  await api("/api/PatientRequests/"+id+"/accept",{method:"POST",body:JSON.stringify({droneId:d?.droneId,supplyId:s?.supplyId||"SUP001",clinicId:"CLN001",originLocationId:"LOC005",preferredSlot:"09:00"})});nav("requests");}catch(e){alert(e.message);}}
+async function doDisp(){try{await api("/api/Dispense",{method:"POST",body:JSON.stringify({patientName:dpn.value,supplyId:dps.value,quantity:dpq.value,targetType:"Patient",clinicId:"CLN001"})});nav("dispense");}catch(e){alert(e.message);}}
+async function verDisp(id){try{await api("/api/Dispense/"+id+"/verify",{method:"POST",body:"{}"});nav("dispense");}catch(e){alert(e.message);}}
+async function addPat(){try{await api("/api/Patients",{method:"POST",body:JSON.stringify({fullName:pfn.value,contactNumber:pfp.value})});nav("patients");}catch(e){alert(e.message);}}
+async function addUser(){try{await api("/api/Users",{method:"POST",body:JSON.stringify({firstName:uf.value,lastName:ul.value,email:ue.value,role:ur.value,password:up.value})});nav("users");}catch(e){alert(e.message);}}
+async function delStaff(id){if(!confirm("Delete staff record?"))return;try{await api("/api/Staff/"+id,{method:"DELETE"});nav("staff");}catch(e){alert(e.message);}}
+async function droneMaint(id,on){try{await api("/api/Drones/"+id+"/maintenance",{method:"POST",body:JSON.stringify({on:on?"true":"false"})});nav("drones");}catch(e){alert(e.message);}}
+async function runSim(){try{const r=await api("/api/Simulations/run/"+scen.value,{method:"POST",body:"{}"});simOut.textContent=JSON.stringify(r,null,2);}catch(e){simOut.textContent=e.message;}}
+async function setWeather(){try{await api("/api/Weather",{method:"POST",body:JSON.stringify({condition:wcon.value})});nav("weather");}catch(e){alert(e.message);}}
+async function doBackup(){try{const r=await api("/api/Backup/sqlite",{method:"POST",body:"{}"});alert(r.message+": "+(r.file||""));}catch(e){alert(e.message);}}
+
+(async()=>{
+  try{const info=await api("/api/Reports/info");modeInfo.textContent="Mode: "+info.mode+" · Provider: "+info.provider+" · Emergency ≤ "+info.urgentMaxKm+" km";}
+  catch{modeInfo.textContent="Start the API (dotnet run)";}
+  if(token&&user)openApp();
+})();
+</script>
+</body>
+</html>
