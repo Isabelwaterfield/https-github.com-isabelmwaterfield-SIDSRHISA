@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 namespace SIDSRH.Api.Models;
 
@@ -70,6 +70,14 @@ public class MedicalSupply
     public int Quantity { get; set; }
     public DateTime ExpiryDate { get; set; }
     public bool ColdChain { get; set; }
+
+    public string? SupplierOwnerId { get; set; }
+    public string? SupplierCode { get; set; }
+    public string? SupplierName { get; set; }
+    public string? BatchNumber { get; set; }
+    public string? Manufacturer { get; set; }
+    public string? RegistrationNumber { get; set; }
+    public string? Status { get; set; } = "Active";
 }
 
 public class Delivery
@@ -173,16 +181,23 @@ public class PatientProfile
 {
     [Key]
     public string PatientId { get; set; } = "";
+
     public string FullName { get; set; } = "";
     public string ContactNumber { get; set; } = "";
     public string? IdNumber { get; set; }
     public string? Address { get; set; }
     public string? LocationId { get; set; }
     public string? Notes { get; set; }
-    public string Source { get; set; } = "Internal"; // Internal | External
+
+    public string Source { get; set; } = "Internal";
     public string Status { get; set; } = "Active";
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string? CreatedByUserId { get; set; }
+
+    public string? Email { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
 }
 
 public class PatientDependent
@@ -276,3 +291,4 @@ public class ClinicAppointment
     public string ReasonBrief { get; set; } = "Follow-up checkup";
     public string Status { get; set; } = "Scheduled";
 }
+
