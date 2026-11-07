@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -7,41 +7,29 @@ using SIDSRH.Api.Data;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin()));
 
-var provider = builder.Configuration["Database:Provider"] ?? "Sqlite";
-var sqliteCs = builder.Configuration["Database:Sqlite"] ?? "Data Source=sidsrh_offline.db";
+var provider = builder.Configuration["Database:Provider"] ?? "SqlServer";
 var sqlServerCs = builder.Configuration["Database:SqlServer"];
-var mySqlCs = builder.Configuration["Database:MySql"];
+var sqliteCs = builder.Configuration["Database:Sqlite"] ?? "Data Source=HealthcareDB.db";
 
-if (provider.Equals("MySql", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(mySqlCs))
-{
-    try
-    {
-        builder.Services.AddDbContext<AppDbContext>(opt =>
-            opt.UseMySql(mySqlCs, ServerVersion.AutoDetect(mySqlCs)));
-        Console.WriteLine("Database provider: MySQL (Phase 4)");
-    }
-    catch
-    {
-        builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(sqliteCs));
-        Console.WriteLine("MySQL unavailable - fell back to SQLite offline");
-        provider = "Sqlite";
-    }
-}
-else if (provider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(sqlServerCs))
+if (provider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
 {
     builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlServer(sqlServerCs));
     Console.WriteLine("Database provider: SQL Server");
 }
 else
 {
-    builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(sqliteCs));
-    Console.WriteLine("Database provider: SQLite (offline / local demo)");
+    // Pin SQLite file under content root so Backup and runtime share one file
+    var dbFile = Path.Combine(builder.Environment.ContentRootPath, "HealthcareDB.db");
+    var cs = $"Data Source={dbFile}";
+    builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(cs));
+    Console.WriteLine("Database provider: SQLite -> " + dbFile);
 }
 
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "SIDSRH-Full-Merged-Secret-Key-Change-In-Production-2026!";
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "SIDSRH-SuperSecret-Key-Change-In-Production-2026!";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
     {
@@ -67,12 +55,12 @@ using (var scope = app.Services.CreateScope())
     {
         db.Database.EnsureCreated();
         DbSeed.EnsureSeed(db);
-        Console.WriteLine($"Database ready. Users: {db.Users.Count()} | Mode: {provider}");
+        Console.WriteLine("Database ready. Users: " + db.Users.Count());
     }
     catch (Exception ex)
     {
         Console.WriteLine("Database init error: " + ex.Message);
-        Console.WriteLine(ex.InnerException?.Message);
+        Console.WriteLine("Tip: set Database:Provider to Sqlite in appsettings.json if SQL Server/LocalDB is unavailable.");
     }
 }
 
@@ -84,5 +72,5 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapFallbackToFile("index.html");
 
-Console.WriteLine("SIDSRH FULL MERGED — http://localhost:5080");
 app.Run();
+
