@@ -5,3 +5,6 @@
 *.db
 **/Backups/
 *.log
+
+# Local backup files
+SIDSRH.Api/Models/*.backup_*
