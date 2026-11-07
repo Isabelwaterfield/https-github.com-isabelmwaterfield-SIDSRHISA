@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SIDSRH.Api.Models;
 
 namespace SIDSRH.Api.Data;
@@ -49,5 +49,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<SystemWeather>().HasKey(x => x.Id);
         modelBuilder.Entity<OtpChallenge>().HasKey(x => x.OtpId);
         modelBuilder.Entity<ClinicAppointment>().HasKey(x => x.AppointmentId);
+        modelBuilder.Entity<SystemWeather>().Property(x => x.Id).ValueGeneratedNever();
+        modelBuilder.Entity<Delivery>().Property(x => x.ActualCost).HasPrecision(18, 2);
+        modelBuilder.Entity<Delivery>().Property(x => x.CalculatedCost).HasPrecision(18, 2);
+        modelBuilder.Entity<Delivery>().Property(x => x.DelayFine).HasPrecision(18, 2);
+        modelBuilder.Entity<Delivery>().Property(x => x.PatientFee).HasPrecision(18, 2);
+        modelBuilder.Entity<PatientRequest>().Property(x => x.EstimatedCost).HasPrecision(18, 2);
     }
 }
+
